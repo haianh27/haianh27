@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhóm 8</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(
+        to bottom,
+        #BEEBFF,
+        #DFF6FF,
+        #F4FCFF
+    );
+    color: #24557A;
+    min-height: 100vh;
+    position: relative;
+  }
+ 
+  header {
+    background: rgba(255,255,255,0.4);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255,255,255,0.5);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+ 
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(
+        135deg,
+        #5CC8FF,
+        #8EE3F5
+    );
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+ 
+  .logo-icon svg { width: 20px; height: 20px; }
+ 
+  h1 { font-size: 1.2rem; color:#1E4D72; font-weight:700; }
+  .subtitle { font-size: 0.78rem; color:#5D7C95; margin-top: 2px; }
+ 
+  .badge {
+    margin-left: auto;
+    font-size: 11px;
+    background: rgba(108,99,255,0.2);
+    color: #a89dff;
+    border: 1px solid rgba(108,99,255,0.3);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+ 
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+  }
+ 
+  @media (max-width: 800px) {
+    .main { grid-template-columns: 1fr; }
+  }
+ 
+  .canvas-section {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+ 
+  .canvas-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #2a2d3e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #8890a8;
+  }
+ 
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #3ecfcf; }
+  .dot.inactive { background: #3a3d50; }
+ 
+  #canvas-container {
+    position: relative;
+    background: linear-gradient(
+            to bottom,
+            #B8EAFF,
+            #DDF8FF
+    );
+
+    min-height: 500px;
+    max-height: 550px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;}
+ 
+  canvas#output-canvas {
+    display: block;
+    max-width: 100%;
+    border-radius: 0;
+  }
+ 
+  #placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #4a4d65;
+    padding: 3rem;
+    text-align: center;
+  }
+ 
+  #placeholder svg { opacity: 0.3; }
+  #placeholder p { font-size: 0.9rem; }
+ 
+  .sidebar { display: flex; flex-direction: column; gap: 1rem; }
+ 
+  .card {
+    background: rgba(255,255,255,0.45);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 10px 30px rgba(91,174,255,.12);
+    border-radius: 14px;
+    padding: 1rem;
+  }
+ 
+  .card h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #5a5f7a;
+    margin-bottom: 0.75rem;
+  }
+ 
+  .upload-area {
+    border: 2px dashed #8EDCFF;
+    background: rgba(255,255,255,0.35);
+    border-radius: 10px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+ 
+  .upload-area:hover {
+    background: rgba(255,255,255,0.6);
+    border-color: #5CC8FF;
+  }
+ 
+  .upload-area svg { color: #4a4d65; margin-bottom: 8px; }
+  .upload-area p { font-size: 13px; color: #6a6f8a; }
+  .upload-area span { font-size: 11px; color: #4a4d65; display: block; margin-top: 4px; }
+ 
+  #file-input { display: none; }
+ 
+  .mode-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 0.75rem;
+  }
+ 
+  .tab-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #2a2d3e;
+    background: transparent;
+    color: #6a6f8a;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+ 
+  .tab-btn.active {
+    background: rgba(92,200,255,0.15);
+    border-color: #5CC8FF;
+    color: #2B6CB0;
+  }
+ 
+  .action-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.75rem;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(92,200,255,0.25);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+ 
+  .action-badge .icon {
+    width: 36px; height: 36px;
+    background: rgba(62,207,207,0.15);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+ 
+  .action-badge .label { font-size: 13px; color: #8890a8; }
+  .action-badge .value { font-size: 16px; font-weight: 600; color: #3ecfcf; }
+ 
+  .confidence-bar {
+    height: 4px;
+    background: #2a2d3e;
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+ 
+  .confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg,
+        #5CC8FF,
+        #7DE2D1);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+ 
+  .keypoints-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 11px;
+  }
+ 
+  .kp-item {
+    background: #12151f;
+    border-radius: 6px;
+    padding: 5px 8px;
+    color: #6a6f8a;
+    border: 1px solid #1e2130;
+  }
+ 
+  .kp-item strong { color: #8890a8; display: block; font-size: 10px; margin-bottom: 2px; }
+ 
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #5a5f7a;
+    padding: 6px 0;
+  }
+ 
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #3a3d50;
+    flex-shrink: 0;
+  }
+ 
+  .status-dot.active { background: #3ecfcf; box-shadow: 0 0 6px #3ecfcf; }
+  .status-dot.warn { background: #f59e0b; }
+ 
+  #process-btn {
+    width: 100%;
+    padding: 0.65rem;
+    background: linear-gradient(
+        135deg,
+        #4AB8FF,
+        #3E95FF
+    );
+    box-shadow: 0 6px 18px rgba(77,168,255,.3);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 8px;
+  }
+ 
+  #process-btn:hover { transform: translateY(-2px); }
+  #process-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+ 
+  .skeleton-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #8890a8;
+    margin-bottom: 6px;
+  }
+ 
+  .toggle {
+    width: 34px; height: 18px;
+    background:#53C8FF;
+    border-radius: 9px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+ 
+  .toggle.off { background: #647af5; }
+ 
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    background: white;
+    border-radius: 50%;
+    top: 3px; left: 19px;
+    transition: left 0.2s;
+  }
+ 
+  .toggle.off::after { left: 3px; }
+ 
+  #media-preview { display: none; }
+ 
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(11,13,21,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    display: none;
+  }
+ 
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid #2a2d3e;
+    border-top-color: #6c63ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+ 
+  @keyframes spin { to { transform: rotate(360deg); } }
+ 
+  .loading-text { font-size: 13px; color: #6a6f8a; }
+ 
+  .video-controls {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-top: 1px solid #2a2d3e;
+    background: #12151f;
+  }
+ 
+  .vc-btn {
+    background: rgba(108,99,255,0.15);
+    border: 1px solid rgba(108,99,255,0.25);
+    color: #a89dff;
+    border-radius: 7px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+ 
+  .vc-btn:hover { background: rgba(108,99,255,0.28); }
+ 
+  #progress-bar {
+    flex: 1;
+    height: 4px;
+    background: #2a2d3e;
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+ 
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6c63ff, #3ecfcf);
+    border-radius: 2px;
+    width: 0%;
+    pointer-events: none;
+  }
+ 
+  #time-display { font-size: 11px; color: #5a5f7a; min-width: 70px; text-align: right; }
+ 
+  .angles-section { margin-top: 8px; }
+  .angle-row {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: #6a6f8a;
+    padding: 3px 0;
+    border-bottom: 1px solid #1e2130;
+  }
+  .angle-row:last-child { border-bottom: none; }
+  .angle-val { color: #a89dff; font-weight: 500; }
+</style>
+</head>
+<body>
+ 
+<header>
+  <div class="logo-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+      <circle cx="12" cy="5" r="2"/>
+      <line x1="12" y1="7" x2="12" y2="13"/>
+      <line x1="12" y1="13" x2="7" y2="18"/>
+      <line x1="12" y1="13" x2="17" y2="18"/>
+      <line x1="8" y1="10" x2="16" y2="10"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Phân tích tư thế người</h1>
+    <div class="subtitle">Skeleton detection · Action recognition · MediaPipe</div>
+  </div>
+</header>
+ 
+<div class="main">
+  <div class="canvas-section">
+    <div class="canvas-header">
+      <div class="dot inactive" id="status-dot"></div>
+      <span id="status-text">Chờ tải ảnh / video...</span>
+    </div>
+    <div id="canvas-container">
+      <div id="placeholder">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="6" r="2.5"/>
+          <line x1="12" y1="8.5" x2="12" y2="15"/>
+          <line x1="12" y1="15" x2="7" y2="20"/>
+          <line x1="12" y1="15" x2="17" y2="20"/>
+          <line x1="8.5" y1="11" x2="15.5" y2="11"/>
+        </svg>
+        <p>Tải ảnh hoặc video lên để bắt đầu<br>phân tích khung xương & nhận dạng hành động</p>
+      </div>
+      <canvas id="output-canvas" style="display:none;"></canvas>
+      <video id="media-preview" playsinline muted></video>
+      <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Đang phân tích...</div>
+      </div>
+    </div>
+    <div class="video-controls" id="video-controls">
+      <button class="vc-btn" id="play-btn">▶ Phát</button>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+      <div id="time-display">0:00 / 0:00</div>
+    </div>
+  </div>
+ 
+  <div class="sidebar">
+    <div class="card">
+      <h3>Tải lên</h3>
+      <div class="mode-tabs">
+        <button class="tab-btn active" id="tab-image" onclick="switchMode('image')">🖼 Ảnh</button>
+        <button class="tab-btn" id="tab-video" onclick="switchMode('video')">🎬 Video</button>
+      </div>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Nhấn để chọn file</p>
+        <span id="upload-hint">JPG, PNG, WEBP</span>
+      </div>
+      <input type="file" id="file-input" accept="image/*">
+      <button id="process-btn" disabled>Phân tích tư thế</button>
+    </div>
+ 
+    <div class="card">
+      <h3>Tùy chỉnh hiển thị</h3>
+      <div class="skeleton-toggle">
+        <span>Vẽ khung xương</span>
+        <div class="toggle" id="toggle-skeleton" onclick="toggleSkeleton()"></div>
+      </div>
+      <div class="skeleton-toggle">
+        <span>Hiện keypoints</span>
+        <div class="toggle" id="toggle-kp" onclick="toggleKp()"></div>
+      </div>
+      <div class="skeleton-toggle">
+        <span>Tên keypoints</span>
+        <div class="toggle off" id="toggle-labels" onclick="toggleLabels()"></div>
+      </div>
+    </div>
+ 
+    <div class="card">
+      <h3>Hành động nhận dạng</h3>
+      <div class="action-badge" id="action-display">
+        <div class="icon" id="action-icon">🧍</div>
+        <div>
+          <div class="label">Đang nhận dạng...</div>
+          <div class="value" id="action-label">–</div>
+          <div class="confidence-bar"><div class="confidence-fill" id="conf-bar"></div></div>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#4a4d65;">Các tư thế có thể nhận: Đứng, Ngồi, Ngồi xổm, Cúi người, Giơ tay, Giơ 2 tay, Nằm, Đi bộ, Nhảy</div>
+    </div>
+ 
+    <div class="card">
+      <h3>Góc khớp</h3>
+      <div class="angles-section" id="angles-section">
+        <div class="angle-row"><span>Khuỷu tay trái</span><span class="angle-val" id="ang-elbow-l">–</span></div>
+        <div class="angle-row"><span>Khuỷu tay phải</span><span class="angle-val" id="ang-elbow-r">–</span></div>
+        <div class="angle-row"><span>Khớp gối trái</span><span class="angle-val" id="ang-knee-l">–</span></div>
+        <div class="angle-row"><span>Khớp gối phải</span><span class="angle-val" id="ang-knee-r">–</span></div>
+        <div class="angle-row"><span>Hông trái</span><span class="angle-val" id="ang-hip-l">–</span></div>
+        <div class="angle-row"><span>Hông phải</span><span class="angle-val" id="ang-hip-r">–</span></div>
+      </div>
+    </div>
+ 
+    <div class="card">
+      <h3>Trạng thái</h3>
+      <div class="status-row"><div class="status-dot active" id="sd-model"></div><span>Mô hình đã tải</span></div>
+      <div class="status-row"><div class="status-dot" id="sd-file"></div><span id="sd-file-text">Chưa có file</span></div>
+      <div class="status-row"><div class="status-dot" id="sd-detect"></div><span id="sd-detect-text">Chưa phân tích</span></div>
+    </div>
+  </div>
+</div>
+ 
+<script>
+let poseDetector = null;
+let showSkeleton = true;
+let showKp = true;
+let showLabels = false;
+let currentMode = 'image';
+let currentFile = null;
+let videoEl = null;
+let isVideoPlaying = false;
+let videoAnimFrame = null;
+
+function fitMedia(originalWidth, originalHeight) {
+  const MAX_WIDTH = 750;
+  const MAX_HEIGHT = 500;
+
+  const scale = Math.min(
+    MAX_WIDTH / originalWidth,
+    MAX_HEIGHT / originalHeight,
+    1
+  );
+
+  return {
+    width: Math.round(originalWidth * scale),
+    height: Math.round(originalHeight * scale)
+  };
+}
+ 
+const KP_NAMES = [
+  'mũi','mắt T (trong)','mắt T (ngoài)','mắt P (trong)','mắt P (ngoài)',
+  'tai T','tai P','vai T','vai P','khuỷu T','khuỷu P','cổ tay T','cổ tay P',
+  'hông T','hông P','gối T','gối P','mắt cá T','mắt cá P','gót T','gót P',
+  'ngón T','ngón P','ngón cái T','ngón cái P','ngón út T','ngón út P',
+  'ngón tay T','ngón tay P','lòng bàn T','lòng bàn P','ngón chân T','ngón chân P'
+];
+ 
+async function initPose() {
+  try {
+    poseDetector = new Pose({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+    });
+    poseDetector.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    poseDetector.onResults(onResults);
+    await poseDetector.initialize();
+    document.getElementById('sd-model').classList.add('active');
+  } catch(e) {
+    console.error('Pose init error:', e);
+  }
+}
+ 
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab-image').classList.toggle('active', mode === 'image');
+  document.getElementById('tab-video').classList.toggle('active', mode === 'video');
+  document.getElementById('upload-hint').textContent = mode === 'image' ? 'JPG, PNG, WEBP' : 'MP4, WEBM, MOV';
+  document.getElementById('file-input').accept = mode === 'image' ? 'image/*' : 'video/*';
+  document.getElementById('video-controls').style.display = 'none';
+  currentFile = null;
+  document.getElementById('process-btn').disabled = true;
+}
+ 
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  currentFile = file;
+  document.getElementById('process-btn').disabled = false;
+  document.getElementById('sd-file').classList.add('active');
+  document.getElementById('sd-file-text').textContent = file.name.length > 22 ? file.name.slice(0,20)+'...' : file.name;
+  if (currentMode === 'image') previewImage(file);
+  else previewVideo(file);
+});
+ 
+function previewImage(file) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.getElementById('output-canvas');
+    const container = document.getElementById('canvas-container');
+    const size = fitMedia(
+  img.width,
+  img.height
+);
+canvas.width = size.width;
+canvas.height = size.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    canvas.style.display = 'block';
+    document.getElementById('placeholder').style.display = 'none';
+  };
+  img.src = url;
+}
+ 
+function previewVideo(file) {
+  const url = URL.createObjectURL(file);
+  videoEl = document.getElementById('media-preview');
+  videoEl.src = url;
+  videoEl.style.display = 'none';
+  videoEl.load();
+  videoEl.addEventListener('loadedmetadata', () => {
+    document.getElementById('video-controls').style.display = 'flex';
+    updateTimeDisplay();
+  });
+  videoEl.addEventListener('timeupdate', updateTimeDisplay);
+}
+ 
+function updateTimeDisplay() {
+  if (!videoEl) return;
+  const cur = videoEl.currentTime, dur = videoEl.duration || 0;
+  document.getElementById('progress-fill').style.width = (dur ? (cur/dur*100) : 0) + '%';
+  document.getElementById('time-display').textContent = `${fmt(cur)} / ${fmt(dur)}`;
+}
+ 
+function fmt(s) {
+  if (isNaN(s)) return '0:00';
+  const m = Math.floor(s/60), sec = Math.floor(s%60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;  
+}
+ 
+document.getElementById('progress-bar').addEventListener('click', (e) => {
+  if (!videoEl || !videoEl.duration) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  videoEl.currentTime = ((e.clientX - rect.left) / rect.width) * videoEl.duration;
+});
+ 
+document.getElementById('play-btn').addEventListener('click', () => {
+  if (!videoEl) return;
+  if (isVideoPlaying) {
+    videoEl.pause();
+    isVideoPlaying = false;
+    document.getElementById('play-btn').textContent = '▶ Phát';
+    if (videoAnimFrame) cancelAnimationFrame(videoAnimFrame);
+  } else {
+    videoEl.play();
+    isVideoPlaying = true;
+    document.getElementById('play-btn').textContent = '⏸ Dừng';
+    processVideoFrame();
+  }
+});
+ 
+async function processVideoFrame() {
+  if (!videoEl || videoEl.paused || videoEl.ended) {
+    isVideoPlaying = false;
+    document.getElementById('play-btn').textContent = '▶ Phát';
+    return;
+  }
+  await sendFrameToPose(videoEl);
+  videoAnimFrame = requestAnimationFrame(processVideoFrame);
+}
+ 
+async function sendFrameToPose(source) {
+  if (!poseDetector) return;
+  try { await poseDetector.send({ image: source }); }
+  catch(e) { console.warn(e); }
+}
+ 
+document.getElementById('process-btn').addEventListener('click', async () => {
+  if (!currentFile || !poseDetector) return;
+  showLoading(true);
+  setStatus('Đang phân tích...', true);
+ 
+  if (currentMode === 'image') {
+    const url = URL.createObjectURL(currentFile);
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.getElementById('output-canvas');
+
+const size = fitMedia(
+  img.width,
+  img.height
+);
+canvas.width = size.width;
+canvas.height = size.height;
+      canvas.style.display = 'block';
+      document.getElementById('placeholder').style.display = 'none';
+      await sendFrameToPose(img);
+      showLoading(false);
+    };
+    img.src = url;
+  } else {
+    if (!videoEl) return;
+    videoEl.currentTime = 0;
+    videoEl.onseeked = async () => {
+      const canvas = document.getElementById('output-canvas');
+
+const size = fitMedia(
+  videoEl.videoWidth,
+  videoEl.videoHeight
+);
+canvas.width = size.width;
+canvas.height = size.height;
+      canvas.style.display = 'block';
+      document.getElementById('placeholder').style.display = 'none';
+      await sendFrameToPose(videoEl);
+      showLoading(false);
+    };
+  }
+});
+ 
+function onResults(results) {
+  const canvas = document.getElementById('output-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+ 
+  const src = results.image;
+  ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+ 
+  if (!results.poseLandmarks) {
+    setStatus('Không phát hiện người trong ảnh', false);
+    document.getElementById('action-label').textContent = 'Không tìm thấy';
+    document.getElementById('action-icon').textContent = '❓';
+    document.getElementById('conf-bar').style.width = '0%';
+    showLoading(false);
+    return;
+  }
+ 
+  const lm = results.poseLandmarks;
+  const w = canvas.width, h = canvas.height;
+ 
+  if (showSkeleton) drawSkeleton(ctx, lm, w, h);
+  if (showKp) drawKeypoints(ctx, lm, w, h);
+  if (showLabels) drawLabels(ctx, lm, w, h);
+ 
+  const action = classifyAction(lm);
+  document.getElementById('action-label').textContent = action.label;
+  document.getElementById('action-icon').textContent = action.icon;
+  document.getElementById('conf-bar').style.width = action.conf + '%';
+ 
+  updateAngles(lm);
+  setStatus(`Phát hiện: ${action.label}`, true);
+  document.getElementById('sd-detect').classList.add('active');
+  document.getElementById('sd-detect-text').textContent = 'Đã phân tích xong';
+}
+ 
+const CONNECTIONS = [
+  [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],
+  [9,10],[11,12],[11,13],[13,15],[15,17],[15,19],[15,21],[17,19],
+  [12,14],[14,16],[16,18],[16,20],[16,22],[18,20],
+  [11,23],[12,24],[23,24],
+  [23,25],[25,27],[27,29],[27,31],[29,31],
+  [24,26],[26,28],[28,30],[28,32],[30,32]
+];
+ 
+function drawSkeleton(ctx, lm, w, h) {
+  ctx.lineWidth = Math.max(1.5, w * 0.003);
+  CONNECTIONS.forEach(([a, b]) => {
+    const la = lm[a], lb = lm[b];
+    if (!la || !lb) return;
+    const vis = Math.min(la.visibility||0, lb.visibility||0);
+    if (vis < 0.3) return;
+    const alpha = Math.min(1, vis);
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(108,99,255,${alpha * 0.9})`;
+    ctx.moveTo(la.x * w, la.y * h);
+    ctx.lineTo(lb.x * w, lb.y * h);
+    ctx.stroke();
+  });
+}
+ 
+function drawKeypoints(ctx, lm, w, h) {
+  const r = Math.max(3, w * 0.006);
+  lm.forEach((p, i) => {
+    if ((p.visibility||0) < 0.3) return;
+    ctx.beginPath();
+    ctx.arc(p.x * w, p.y * h, r, 0, Math.PI * 2);
+    const isHead = i <= 10;
+    ctx.fillStyle = isHead ? '#3ecfcf' : '#f59e0b';
+    ctx.strokeStyle = '#0b0d15';
+    ctx.lineWidth = 1;
+    ctx.fill();
+    ctx.stroke();
+  });
+}
+ 
+function drawLabels(ctx, lm, w, h) {
+  ctx.font = `${Math.max(9, w * 0.012)}px system-ui`;
+  ctx.fillStyle = 'rgba(232,234,246,0.85)';
+  lm.forEach((p, i) => {
+    if ((p.visibility||0) < 0.5 || !KP_NAMES[i]) return;
+    ctx.fillText(KP_NAMES[i], p.x * w + 6, p.y * h - 4);
+  });
+}
+ 
+function getAngle(a, b, c) {
+  const ab = [b.x - a.x, b.y - a.y];
+  const cb = [b.x - c.x, b.y - c.y];
+  const dot = ab[0]*cb[0] + ab[1]*cb[1];
+  const magAB = Math.sqrt(ab[0]**2 + ab[1]**2);
+  const magCB = Math.sqrt(cb[0]**2 + cb[1]**2);
+  if (magAB === 0 || magCB === 0) return 0;
+  return Math.round(Math.acos(Math.min(1, Math.max(-1, dot / (magAB * magCB)))) * 180 / Math.PI);
+}
+ 
+function updateAngles(lm) {
+  const safe = (i) => lm[i] || {x:0,y:0,z:0,visibility:0};
+  document.getElementById('ang-elbow-l').textContent = getAngle(safe(11), safe(13), safe(15)) + '°';
+  document.getElementById('ang-elbow-r').textContent = getAngle(safe(12), safe(14), safe(16)) + '°';
+  document.getElementById('ang-knee-l').textContent = getAngle(safe(23), safe(25), safe(27)) + '°';
+  document.getElementById('ang-knee-r').textContent = getAngle(safe(24), safe(26), safe(28)) + '°';
+  document.getElementById('ang-hip-l').textContent = getAngle(safe(11), safe(23), safe(25)) + '°';
+  document.getElementById('ang-hip-r').textContent = getAngle(safe(12), safe(24), safe(26)) + '°';
+}
+ 
+function classifyAction(lm) {
+  const p = (i) => lm[i] || {x:0.5, y:0.5, visibility:0};
+ 
+  const nose = p(0), lShoulder = p(11), rShoulder = p(12);
+  const lHip = p(23), rHip = p(24);
+  const lKnee = p(25), rKnee = p(26);
+  const lAnkle = p(27), rAnkle = p(28);
+  const lWrist = p(15), rWrist = p(16);
+  const lElbow = p(13), rElbow = p(14);
+ 
+  const shoulderY = (lShoulder.y + rShoulder.y) / 2;
+  const hipY = (lHip.y + rHip.y) / 2;
+  const kneeY = (lKnee.y + rKnee.y) / 2;
+  const ankleY = (lAnkle.y + rAnkle.y) / 2;
+  const wristY = (lWrist.y + rWrist.y) / 2;
+ 
+  const bodyHeight = Math.abs(nose.y - ankleY);
+  const kneeAngleL = getAngle(lHip, lKnee, lAnkle);
+  const kneeAngleR = getAngle(rHip, rKnee, rAnkle);
+  const avgKneeAngle = (kneeAngleL + kneeAngleR) / 2;
+  const hipAngleL = getAngle(lShoulder, lHip, lKnee);
+  const hipAngleR = getAngle(rShoulder, rHip, rKnee);
+  const avgHipAngle = (hipAngleL + hipAngleR) / 2;
+  const bothWristsHigh = lWrist.y < lShoulder.y && rWrist.y < rShoulder.y;
+  const oneWristHigh = lWrist.y < lShoulder.y || rWrist.y < rShoulder.y;
+ 
+  if (nose.y > hipY && bodyHeight < 0.3) {
+    return { label: 'Đang nằm', icon: '🛏', conf: 85 };
+  }
+  if (bothWristsHigh && lWrist.y < lElbow.y && rWrist.y < rElbow.y) {
+    return { label: 'Giơ 2 tay lên', icon: '🙌', conf: 90 };
+  }
+  if (oneWristHigh && (lWrist.y < lShoulder.y - 0.05 || rWrist.y < rShoulder.y - 0.05)) {
+    return { label: 'Đang giơ tay', icon: '✋', conf: 88 };
+  }
+  if (avgKneeAngle < 90 && avgHipAngle < 90) {
+    return { label: 'Đang ngồi xổm', icon: '🏋', conf: 82 };
+  }
+  if (hipY > kneeY * 0.85 && avgKneeAngle < 120 && avgHipAngle < 130) {
+    return { label: 'Đang ngồi', icon: '🪑', conf: 86 };
+  }
+  if (shoulderY > hipY * 1.05) {
+    return { label: 'Đang cúi người', icon: '🙇', conf: 80 };
+  }
+  if (Math.abs(lAnkle.y - rAnkle.y) > 0.08 && avgKneeAngle > 140) {
+    return { label: 'Đang đi bộ', icon: '🚶', conf: 78 };
+  }
+  if (nose.y < 0.25 || ankleY < 0.7) {
+    return { label: 'Đang nhảy', icon: '🦘', conf: 75 };
+  }
+  return { label: 'Đang đứng', icon: '🧍', conf: 90 };
+}
+ 
+function showLoading(show) {
+  document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+}
+ 
+function setStatus(text, active) {
+  document.getElementById('status-text').textContent = text;
+  document.getElementById('status-dot').classList.toggle('inactive', !active);
+}
+ 
+function toggleSkeleton() {
+  showSkeleton = !showSkeleton;
+  document.getElementById('toggle-skeleton').classList.toggle('off', !showSkeleton);
+}
+function toggleKp() {
+  showKp = !showKp;
+  document.getElementById('toggle-kp').classList.toggle('off', !showKp);
+}
+function toggleLabels() {
+  showLabels = !showLabels;
+  document.getElementById('toggle-labels').classList.toggle('off', !showLabels);
+}
+ 
+const uploadArea = document.getElementById('upload-area');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = '#6c63ff'; });
+uploadArea.addEventListener('dragleave', () => uploadArea.style.borderColor = '#3a3d55');
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.style.borderColor = '#3a3d55';
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  currentFile = file;
+  if (file.type.startsWith('image/')) { switchMode('image'); }
+  else if (file.type.startsWith('video/')) { switchMode('video'); }
+  document.getElementById('process-btn').disabled = false;
+  if (currentMode === 'image') previewImage(file);
+  else previewVideo(file);
+  document.getElementById('sd-file').classList.add('active');
+  document.getElementById('sd-file-text').textContent = file.name.length > 22 ? file.name.slice(0,20)+'...' : file.name;
+});
+ 
+initPose();
+</script>
+</body>
+</html>
